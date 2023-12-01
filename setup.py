@@ -1,5 +1,4 @@
 import cx_Freeze
-from apoio import versao_local as vl
 import hashlib
 import os.path
 
