@@ -141,6 +141,3 @@ def exportar_excel(dados_para_excel, nome_arquivo):
 
 while True:
     exibir_janela_inicial()
-
-
-
