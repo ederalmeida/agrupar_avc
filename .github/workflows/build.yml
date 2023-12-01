@@ -1,0 +1,151 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10, etc
+
+jobs:
+
+  createrelease:
+    name: Create Release
+    runs-on: [ubuntu-latest]
+    steps:
+      - name: Get tag name
+        id: get_tag_name
+        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}  
+        
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.get_tag_name.outputs.VERSION }}
+          release_name: Release ${{ steps.get_tag_name.outputs.VERSION }}
+          draft: false
+          prerelease: false
+
+      - name: Output Release URL File
+        run: echo "${{ steps.create_release.outputs.upload_url }}" > release_url.txt
+
+      - name: Save Release URL File for publish
+        uses: actions/upload-artifact@v1
+        with:
+          name: release_url
+          path: release_url.txt
+
+      - name: Output tag_version
+        run: echo "${{ steps.get_tag_name.outputs.VERSION }}" > tag_version.txt
+
+      - name: Save tag_version
+        uses: actions/upload-artifact@v1
+        with:
+          name: tag_version
+          path: tag_version.txt 
+
+
+  build:
+    name: Build packages
+    needs: createrelease
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            TARGET: windows
+            CMD_BUILD: python setup.py build
+            OUT_FILE_NAME: cris
+            ASSET_MIME: application/vnd.microsoft.portable-executable
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Build with CX-Freeze for ${{matrix.TARGET}}
+        run: ${{matrix.CMD_BUILD}}
+
+      - name: Load Release URL File from release job
+        uses: actions/download-artifact@v1
+        with:
+          name: release_url
+
+      - name: Get Release File Name & Upload URL
+        id: get_release_info
+        shell: bash
+        run: |
+          value=`cat release_url/release_url.txt`
+          echo ::set-output name=upload_url::$value
+
+      - name: compress directory
+        uses: papeloto/action-zip@v1
+        with:
+          files: ./build/exe.win-amd64-3.10/
+          dest: ./build/exe.win-amd64-3.10/site/${{ matrix.OUT_FILE_NAME}}.zip
+
+      - name: Load tag_version
+        uses: actions/download-artifact@v1
+        with:
+          name: tag_version
+          path: ./build/exe.win-amd64-3.10/site/
+          
+      - name: Get Release File Name & Upload URL
+        id: get_tag_info
+        shell: bash
+        run: |
+          value=`cat ./build/exe.win-amd64-3.10/site/tag_version.txt`
+          echo ::set-output name=tag_version::$value
+        
+      - name: Upload Release Asset
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.get_release_info.outputs.upload_url }}
+          asset_path: ./build/exe.win-amd64-3.10/site/${{ matrix.OUT_FILE_NAME}}.zip
+          asset_name: ${{ matrix.OUT_FILE_NAME}}.zip
+          asset_content_type: ${{ matrix.ASSET_MIME}}
+ 
+      - name: FTP Deploy
+        # You may pin to the exact commit or the version.
+        # uses: SamKirkland/FTP-Deploy-Action@1b21034a8decff23858a1721ca2c25b949b4bc78
+        uses: SamKirkland/FTP-Deploy-Action@4.3.2
+        with:
+          # ftp server
+          server: files.000webhost.com
+          # ftp username
+          username: robocris
+          # ftp password
+          password: ${{ secrets.ftp_cris_password }} 
+          # Server port to connect to (read your web hosts docs)
+          port: 21
+          # protocol to deploy with - ftp, ftps, or ftps-legacy
+          protocol: ftp
+          # Folder to upload from, must end with trailing slash /
+          local-dir: ./build/exe.win-amd64-3.10/site/
+          # Path to upload to on the server. Must end with trailing slash /
+          server-dir: public_html/cris/
+          # Path and name of the state file - this file is used to track which files have been deployed
+          # state-name: ./build/exe.win-amd64-3.10/${{ matrix.OUT_FILE_NAME}}.zip
+          
+          # Prints which modifications will be made with current config options, but doesnt actually make any changes
+          #dry-run: # optional
+          # Deletes ALL contents of server-dir, even items in excluded with exclude argument
+          dangerous-clean-slate: true
+          # An array of glob patterns, these files will not be included in the publish/delete process
+          #exclude: # optional
+          # How verbose should the information be - minimal, standard, or verbose
+          #log-level: # optional
+          # strict or loose
+          #security: # optional
+          # Timeout in milliseconds for FTP operations
+          #timeout: # optional
