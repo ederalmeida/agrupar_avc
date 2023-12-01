@@ -52,8 +52,6 @@ def exibir_janela_inicial():
                 exportar_excel(dados_para_excel, os.path.join(values['-PASTA-'], values['-NOME_ARQUIVO-']))
                 sg.popup('Agrupamento de AVCs concluído')
 
-# construir janela para cadastrar concessões, material e centro de lucro
-
 # Importar informações sobre materia e centros de lucro das concessões
 def importar_cadastro_concessoes(caminho_arquivo):
 
