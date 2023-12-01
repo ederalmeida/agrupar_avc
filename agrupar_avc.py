@@ -39,9 +39,6 @@ def exibir_janela_inicial():
             janela.close()
             sys.exit()
 
-        if event == '-CADASTRAR-':
-            janela_cadastrar()
-
         if event == '-AGRUPAR-':
             if values['-PASTA-'] == '':
                 sg.popup('Favor indicar a pasta onde estão os AVCs', title='Erro')
