@@ -19,17 +19,22 @@ def exibir_janela_inicial():
               [sg.InputText('', key='-INF_CONC-', size=(40, 1)), sg.FileBrowse('procurar')]]
     
     linha3 = [[sg.Text('')],
+              [sg.Text('Informar texto para o campo ATRIBUIÇÃO', size=(50, 1))],
+              [sg.InputText('', key='-ATRIBUICAO-', size=(40, 1))]]
+    
+    linha4 = [[sg.Text('')],
               [sg.Text('Nome do arquivo agrupador (não precisa da extensão .xlsx)', size=(50, 1))],
               [sg.InputText('', key='-NOME_ARQUIVO-', size=(40, 1))]]
     
-    linha4 = [[sg.Text('')],
+    linha5 = [[sg.Text('')],
               [sg.Button('EXECUTAR', key='-AGRUPAR-', enable_events=True)]]
     
     layout = [cabecalho,
               linha1,
               linha2,
               linha3,
-              linha4]
+              linha4,
+              linha5]
 
     janela = sg.Window('Agrupador de AVCs', layout, default_element_size=(40, 1), element_justification='left', grab_anywhere=False) 
 
@@ -43,12 +48,12 @@ def exibir_janela_inicial():
             if values['-PASTA-'] == '':
                 sg.popup('Favor indicar a pasta onde estão os AVCs', title='Erro')
             elif values['-NOME_ARQUIVO-'] == '':
-                sg.popup('Favor nome para o arquivo que será criado', title='Erro')
+                sg.popup('Favor inserir nome para o arquivo que será criado', title='Erro')
             else:
                 janela.close()
                 sg.popup('O processo de agrupamento irá iniciar agora. Ao final irá aparecer uma janela indicado a conclusão', title='Aviso')
                 dados_concessoes = importar_cadastro_concessoes(values['-INF_CONC-'])
-                dados_para_excel = armazenar_dados_avc(obter_relacao_xls(values['-PASTA-']), dados_concessoes)
+                dados_para_excel = armazenar_dados_avc(obter_relacao_xls(values['-PASTA-']), dados_concessoes, values['-ATRIBUICAO-'])
                 exportar_excel(dados_para_excel, os.path.join(values['-PASTA-'], values['-NOME_ARQUIVO-']))
                 sg.popup('Agrupamento de AVCs concluído')
 
@@ -105,7 +110,7 @@ def verfica_valor(valor):
 
     return valor_ajustado
 
-def armazenar_dados_avc(relacao_xls, dados_concessoes):    
+def armazenar_dados_avc(relacao_xls, dados_concessoes, atribuicao):    
     dados_avcs = []
 
     for avc in relacao_xls:
@@ -125,12 +130,16 @@ def armazenar_dados_avc(relacao_xls, dados_concessoes):
                 segundo_vencimento = verfica_valor(dados[0][10][i])
                 terceiro_vencimento = verfica_valor(dados[0][11][i])
                 dados_avcs.append([dados[0][0][i], dados[0][1][i], dados[0][2][i], primeiro_vencimento,
-                                    segundo_vencimento, terceiro_vencimento, material_e_centro_lucro[0], material_e_centro_lucro[1]])
+                                    segundo_vencimento, terceiro_vencimento, material_e_centro_lucro[0],
+                                    material_e_centro_lucro[1], atribuicao])
             
     return dados_avcs
 
 def exportar_excel(dados_para_excel, nome_arquivo):
-    df = pd.DataFrame(dados_para_excel, columns=['ONS', 'USUARIAS', 'CNPJ', '1o. Vencimento', '2o. Vencimento', '3o. Vencimento', 'Material', 'Centro Lucro'])
+    df = pd.DataFrame(dados_para_excel, columns=['ONS', 'USUARIAS', 'CNPJ', '1o. Vencimento',
+                                                 '2o. Vencimento', '3o. Vencimento', 'Material',
+                                                 'Centro Lucro', 'atribuicao'])
+    df = df.sort_values(by=['ONS'])
     df.to_excel(nome_arquivo + '.xlsx', index=False)
 
 
