@@ -111,7 +111,8 @@ def verfica_valor(valor):
     return valor_ajustado
 
 def armazenar_dados_avc(relacao_xls, dados_concessoes, atribuicao):    
-    dados_avcs = []
+    dados_avcs = {}
+    dados_clientes = []
 
     for avc in relacao_xls:
         material_e_centro_lucro = dados_concessoes.get(avc[0])
@@ -119,7 +120,11 @@ def armazenar_dados_avc(relacao_xls, dados_concessoes, atribuicao):
         dados = pd.read_html(avc[1])
         
         for i in range(0, len(dados[0])):
-            if str(dados[0][0][i]) == 'nan':
+            if str(dados[0][1][i]) == 'Usuárias':
+                dt_vencimento_1 = str(dados[0][9][i])[-10:]
+                dt_vencimento_2 = str(dados[0][10][i])[-10:]
+                dt_vencimento_3 = str(dados[0][11][i])[-10:]
+            elif str(dados[0][0][i]) == 'nan':
                 continue
             elif str(dados[0][1][i])[0:7] == 'Empresa':
                 continue
@@ -129,16 +134,25 @@ def armazenar_dados_avc(relacao_xls, dados_concessoes, atribuicao):
                 primeiro_vencimento = verfica_valor(dados[0][9][i])
                 segundo_vencimento = verfica_valor(dados[0][10][i])
                 terceiro_vencimento = verfica_valor(dados[0][11][i])
-                dados_avcs.append([dados[0][0][i], dados[0][1][i], dados[0][2][i], primeiro_vencimento,
+                dados_clientes.append([dados[0][0][i], dados[0][1][i], dados[0][2][i], primeiro_vencimento,
                                     segundo_vencimento, terceiro_vencimento, material_e_centro_lucro[0],
                                     material_e_centro_lucro[1], atribuicao])
+                
+    dados_avcs = {
+        'dt_vencimento_1': dt_vencimento_1,
+        'dt_vencimento_2': dt_vencimento_2,
+        'dt_vencimento_3': dt_vencimento_3,
+        'dados_clientes': dados_clientes
+        }
             
     return dados_avcs
 
 def exportar_excel(dados_para_excel, nome_arquivo):
-    df = pd.DataFrame(dados_para_excel, columns=['ONS', 'USUARIAS', 'CNPJ', '1o. Vencimento',
-                                                 '2o. Vencimento', '3o. Vencimento', 'Material',
-                                                 'Centro Lucro', 'atribuicao'])
+    df = pd.DataFrame(dados_para_excel.get('dados_clientes'), columns=['ONS', 'Usuarias', 'CNPJ',
+                                                                       dados_para_excel.get('dt_vencimento_1'),
+                                                                       dados_para_excel.get('dt_vencimento_2'),
+                                                                       dados_para_excel.get('dt_vencimento_3'),
+                                                                       'Material','Centro Lucro', 'Atribuicao'])
     df = df.sort_values(by=['ONS'])
     df.to_excel(nome_arquivo + '.xlsx', index=False)
 
