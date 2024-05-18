@@ -2,7 +2,7 @@ import cx_Freeze
 
 build_exe_options = {
 'include_msvcr': True,
-"excludes": ["tkinter", "unittest"],
+"excludes": ["unittest"],
     "zip_include_packages": ["encodings"]
 }
 
