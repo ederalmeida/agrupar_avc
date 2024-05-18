@@ -1,5 +1,4 @@
 cx_Freeze
-PySimpleGUI
 pandas
 lxml
 openpyxl

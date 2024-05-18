@@ -1,22 +1,61 @@
-import tkinter as tk
-from tkinter import filedialog
-from tkinter import messagebox
 import pandas as pd
 import os
 import sys
+import PySimpleGUI as sg
 import csv
 
-def procurar_pasta():
-    pasta = filedialog.askdirectory()
-    if pasta:
-        entry_pasta.delete(0, tk.END)
-        entry_pasta.insert(0, pasta)
+def exibir_janela_inicial():
+    sg.theme('Reddit')
 
-def procurar_arquivo():
-    arquivo = filedialog.askopenfilename(filetypes=[("CSV files", "*.csv")])
-    if arquivo:
-        entry_arquivo.delete(0, tk.END)
-        entry_arquivo.insert(0, arquivo)
+    cabecalho = [[sg.Text('Agrupador de AVCs', size=(20,1), justification='center', font=("Helvetica", 20))],
+                 [sg.Text('_'  * 60, size=(45, 1))]]
+    
+    linha1 = [[sg.Text('')],
+              [sg.Text('Selecione a pasta onde estão salvos os AVCs', size=(50, 1))],
+              [sg.InputText('', key='-PASTA-', size=(40, 1)), sg.FolderBrowse('procurar')]]
+    
+    linha2 = [[sg.Text('')],
+              [sg.Text('Selecione o arquivo com as informações das Concessões', size=(50, 1))],
+              [sg.InputText('', key='-INF_CONC-', size=(40, 1)), sg.FileBrowse('procurar')]]
+    
+    linha3 = [[sg.Text('')],
+              [sg.Text('Informar texto para o campo ATRIBUIÇÃO', size=(50, 1))],
+              [sg.InputText('', key='-ATRIBUICAO-', size=(40, 1))]]
+    
+    linha4 = [[sg.Text('')],
+              [sg.Text('Nome do arquivo agrupador (não precisa da extensão .xlsx)', size=(50, 1))],
+              [sg.InputText('', key='-NOME_ARQUIVO-', size=(40, 1))]]
+    
+    linha5 = [[sg.Text('')],
+              [sg.Button('EXECUTAR', key='-AGRUPAR-', enable_events=True)]]
+    
+    layout = [cabecalho,
+              linha1,
+              linha2,
+              linha3,
+              linha4,
+              linha5]
+
+    janela = sg.Window('Agrupador de AVCs', layout, default_element_size=(40, 1), element_justification='left', grab_anywhere=False) 
+
+    while True:
+        event, values = janela.read()
+        if event in (sg.WIN_CLOSED, 'Exit'):
+            janela.close()
+            sys.exit()
+
+        if event == '-AGRUPAR-':
+            if values['-PASTA-'] == '':
+                sg.popup('Favor indicar a pasta onde estão os AVCs', title='Erro')
+            elif values['-NOME_ARQUIVO-'] == '':
+                sg.popup('Favor inserir nome para o arquivo que será criado', title='Erro')
+            else:
+                janela.close()
+                sg.popup('O processo de agrupamento irá iniciar agora. Ao final irá aparecer uma janela indicado a conclusão', title='Aviso')
+                dados_concessoes = importar_cadastro_concessoes(values['-INF_CONC-'])
+                dados_para_excel = armazenar_dados_avc(obter_relacao_xls(values['-PASTA-']), dados_concessoes, values['-ATRIBUICAO-'])
+                exportar_excel(dados_para_excel, os.path.join(values['-PASTA-'], values['-NOME_ARQUIVO-']))
+                sg.popup('Agrupamento de AVCs concluído')
 
 # Importar informações sobre materia e centros de lucro das concessões
 def importar_cadastro_concessoes(caminho_arquivo):
@@ -117,59 +156,6 @@ def exportar_excel(dados_para_excel, nome_arquivo):
     df = df.sort_values(by=['ONS'])
     df.to_excel(nome_arquivo + '.xlsx', index=False)
 
-def executar():
-    pasta = entry_pasta.get()
-    arquivo = entry_arquivo.get()
-    atribuicao = entry_atribuicao.get()
-    nome_arquivo = entry_nome_arquivo.get()
-    
-    if not (pasta and arquivo and nome_arquivo):
-        messagebox.showwarning("Campos incompletos", "Por favor, preencha todos os campos.")
-    else:
-        # Aqui você pode adicionar o código para a ação do botão "Executar"
-        messagebox.showinfo("Informação", "O processo de agrupamento irá iniciar agora. Ao final irá aparecer uma janela indicado a conclusão")
-        dados_concessoes = importar_cadastro_concessoes(arquivo)
-        dados_para_excel = armazenar_dados_avc(obter_relacao_xls(pasta), dados_concessoes, atribuicao)
-        exportar_excel(dados_para_excel, os.path.join(pasta, nome_arquivo))
-        messagebox.showinfo("Informação", "Processamento concluído com sucesso!")
 
-# Criação da janela principal
-root = tk.Tk()
-root.title("Agrupar AVCs")
-
-# Label e campo para selecionar a pasta
-label_pasta = tk.Label(root, text="Selecione a pasta onde estão salvos os AVCs")
-label_pasta.grid(row=0, column=0, padx=10, pady=5, sticky='w')
-entry_pasta = tk.Entry(root, width=50)
-entry_pasta.grid(row=0, column=1, padx=10, pady=5)
-button_pasta = tk.Button(root, text="Procurar Pasta    ", command=procurar_pasta)
-button_pasta.grid(row=0, column=2, padx=10, pady=5)
-
-# Label e campo para selecionar o arquivo CSV
-label_arquivo = tk.Label(root, text="Selecione o arquivo com as informações das Concessões")
-label_arquivo.grid(row=1, column=0, padx=10, pady=5, sticky='w')
-entry_arquivo = tk.Entry(root, width=50)
-entry_arquivo.grid(row=1, column=1, padx=10, pady=5)
-button_arquivo = tk.Button(root, text="Procurar Arquivo", command=procurar_arquivo)
-button_arquivo.grid(row=1, column=2, padx=10, pady=5)
-
-# Label e campo para inserir texto de atribuição
-label_atribuicao = tk.Label(root, text="Informar texto para o campo ATRIBUIÇÃO")
-label_atribuicao.grid(row=2, column=0, padx=10, pady=5, sticky='w')
-entry_atribuicao = tk.Entry(root, width=50)
-entry_atribuicao.grid(row=2, column=1, padx=10, pady=5)
-
-# Label e campo para nome do arquivo agrupador
-label_nome_arquivo = tk.Label(root, text="Nome do arquivo agrupador (não precisa da extensão .xlsx)")
-label_nome_arquivo.grid(row=3, column=0, padx=10, pady=5, sticky='w')
-entry_nome_arquivo = tk.Entry(root, width=50)
-entry_nome_arquivo.grid(row=3, column=1, padx=10, pady=5)
-
-# Botão para executar a ação
-button_executar = tk.Button(root, text="       Executar       ", command=executar)
-button_executar.grid(row=4, column=2, padx=10, pady=10)
-
-# Iniciar o loop principal da interface gráfica
-root.mainloop()
-
-
+while True:
+    exibir_janela_inicial()
