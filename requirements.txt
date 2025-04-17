@@ -2,3 +2,5 @@ cx_Freeze
 pandas
 lxml
 openpyxl
+html5lib
+beautifulsoup4

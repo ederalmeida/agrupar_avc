@@ -48,7 +48,7 @@ def obter_relacao_xls(caminho):
     for objeto in listar_objetos_diretorio:
         
         # se o final do arquivo for .xml adiciona na lista
-        if objeto[-4:].lower() == '.xls':
+        if objeto[-4:].lower() in('.xls', 'xlsx'):
             enderecos_arquivos_xls.append([objeto[4:8], os.path.join(caminho, objeto)])
 
     # Se a lista não for vazia, retorna a lista
@@ -58,7 +58,7 @@ def obter_relacao_xls(caminho):
     # Se for, informa
     #TODO melhorar para que não feche o robô. De preferência, voltar para a tela de interação que chamou a função
     else:
-        sg.popup('Não existem arquivos .XLS no diretório indicado a serem importados', title='ERRO!')
+        messagebox.showwarning("Erro!", 'Não existem arquivos .XLS no diretório indicado a serem importados')
         sys.exit()
 
 def verfica_valor(valor):
