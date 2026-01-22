@@ -61,7 +61,7 @@ def obter_relacao_xls(caminho):
         messagebox.showwarning("Erro!", 'Não existem arquivos .XLS no diretório indicado a serem importados')
         sys.exit()
 
-def verfica_valor(valor):
+def verifica_valor(valor):
     virgula = ','
     if virgula not in valor:
         tamanho_parte_inteira = len(valor) - 2
@@ -77,34 +77,83 @@ def armazenar_dados_avc(relacao_xls, dados_concessoes, atribuicao):
 
     for avc in relacao_xls:
         material_e_centro_lucro = dados_concessoes.get(avc[0])
-
-        dados = pd.read_html(avc[1])
         
-        for i in range(0, len(dados[0])):
-            if str(dados[0][1][i]) == 'Usuárias':
-                dt_vencimento_1 = str(dados[0][9][i])[-10:]
-                dt_vencimento_2 = str(dados[0][10][i])[-10:]
-                dt_vencimento_3 = str(dados[0][11][i])[-10:]
-            elif str(dados[0][0][i]) == 'nan':
+        # Para ambos .xlsx e .xls, use pd.read_excel()
+        if str(avc[1]).lower().endswith(('.xlsx', '.xls')):
+            try:
+                # Para .xls, tente engine 'xlrd' ou 'openpyxl'
+                if str(avc[1]).lower().endswith('.xls'):
+                    try:
+                        dados = pd.read_excel(avc[1], engine='xlrd')
+                    except:
+                        # Se 'xlrd' não funcionar, tente sem engine
+                        dados = pd.read_excel(avc[1])
+                else:
+                    dados = pd.read_excel(avc[1])
+                df = dados
+            except Exception as e:
+                messagebox.showerror("Erro", f"Erro ao ler arquivo {avc[0]}: {str(e)}")
+                # Tente instalar: pip install xlrd
                 continue
-            elif str(dados[0][1][i])[0:7] == 'Empresa':
+        else:
+            messagebox.showinfo("Formato não suportado", f"Formato não suportado: {avc[0]}")
+            continue
+        
+        if df is None or df.empty:
+            continue
+            
+        # Inicializa as variáveis de data
+        dt_vencimento_1 = None
+        dt_vencimento_2 = None
+        dt_vencimento_3 = None
+        
+        # Itera pelas linhas do DataFrame
+        for i in range(len(df)):
+            # Para acessar valores em um DataFrame, use .iloc ou .loc
+            # Verifica se a coluna 1 (segunda coluna) tem o valor 'Usuárias'
+            # Primeiro, verifique se há colunas suficientes
+            #if df.shape[1] < 12:
+            #    continue
+                
+            if str(df.iloc[i, 1]) == 'Usuárias':
+                dt_vencimento_1 = str(df.iloc[i, 3])[-10:] if len(str(df.iloc[i, 3])) >= 10 else ''
+                dt_vencimento_2 = str(df.iloc[i, 4])[-10:] if len(str(df.iloc[i, 4])) >= 10 else ''
+                dt_vencimento_3 = str(df.iloc[i, 5])[-10:] if len(str(df.iloc[i, 5])) >= 10 else ''
+            elif pd.isna(df.iloc[i, 0]):  # Verifica se é NaN
                 continue
-            elif dados[0][0][i] == 'Total Geral':
+            elif str(df.iloc[i, 1])[0:7] == 'Empresa':
+                continue
+            elif str(df.iloc[i, 0]) == 'Total Geral':
+                continue
+            elif str(df.iloc[i, 1])[0:10] == 'Relatório':
+                continue
+            elif pd.isna(df.iloc[i, 4]):  # Verifica se é NaN
                 continue
             else:
-                primeiro_vencimento = verfica_valor(dados[0][9][i])
-                segundo_vencimento = verfica_valor(dados[0][10][i])
-                terceiro_vencimento = verfica_valor(dados[0][11][i])
-                dados_clientes.append([dados[0][0][i], dados[0][1][i], dados[0][2][i], primeiro_vencimento,
-                                    segundo_vencimento, terceiro_vencimento, material_e_centro_lucro[0],
-                                    material_e_centro_lucro[1], atribuicao])
+                #primeiro_vencimento = verifica_valor(df.iloc[i, 3])
+                #segundo_vencimento = verifica_valor(df.iloc[i, 4])
+                #terceiro_vencimento = verifica_valor(df.iloc[i, 5])
+                primeiro_vencimento = df.iloc[i, 3]
+                segundo_vencimento = df.iloc[i, 4]
+                terceiro_vencimento = df.iloc[i, 5]
+                dados_clientes.append([
+                    df.iloc[i, 0],  # Coluna 0
+                    df.iloc[i, 1],  # Coluna 1
+                    df.iloc[i, 2],  # Coluna 2
+                    primeiro_vencimento,
+                    segundo_vencimento,
+                    terceiro_vencimento,
+                    material_e_centro_lucro[0] if material_e_centro_lucro else None,
+                    material_e_centro_lucro[1] if material_e_centro_lucro else None,
+                    atribuicao
+                ])
                 
     dados_avcs = {
         'dt_vencimento_1': dt_vencimento_1,
         'dt_vencimento_2': dt_vencimento_2,
         'dt_vencimento_3': dt_vencimento_3,
         'dados_clientes': dados_clientes
-        }
+    }
             
     return dados_avcs
 
