@@ -74,7 +74,7 @@ jobs:
         run: ${{matrix.CMD_BUILD}}
 
       - name: Load Release URL File from release job
-        uses: actions/download-artifact@v1
+        uses: actions/download-artifact@v4
         with:
           name: release_url
 
@@ -92,7 +92,7 @@ jobs:
           dest: ./build/exe.win-amd64-3.12/site/${{ matrix.OUT_FILE_NAME}}.zip
 
       - name: Load tag_version
-        uses: actions/download-artifact@v1
+        uses: actions/download-artifact@v4
         with:
           name: tag_version
           path: ./build/exe.win-amd64-3.12/site/
