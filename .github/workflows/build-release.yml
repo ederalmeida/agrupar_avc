@@ -29,7 +29,7 @@ jobs:
     
     - name: Compactar resultado
       run: |
-        Compress-Archive -Path "build\*" -DestinationPath "SeuProjeto-${{ github.ref_name }}-windows.zip"
+        Compress-Archive -Path "build\*" -DestinationPath "AgruparAVC-${{ github.ref_name }}-windows.zip"
     
     - name: Criar Release
       uses: softprops/action-gh-release@v1
@@ -39,4 +39,4 @@ jobs:
         tag_name: ${{ github.ref }}
         name: Release ${{ github.ref_name }}
         files: |
-          SeuProjeto-*.zip
+          AgruparAVC-*.zip
