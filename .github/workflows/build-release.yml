@@ -1,21 +1,13 @@
-name: Build and Release
+name: Build Windows Executable
 
 on:
   push:
     tags:
-      - 'v*'  # Aciona quando tags começando com 'v' são publicadas
+      - 'v*'
 
 jobs:
-  build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]  # Multiplataforma
-        python-version: ['3.8', '3.9', '3.10', '3.11']
-        exclude:
-          # Exclui combinações específicas se necessário
-          - os: windows-latest
-            python-version: '3.8'
+  build-windows:
+    runs-on: windows-latest
     
     steps:
     - name: Checkout código
@@ -24,67 +16,27 @@ jobs:
     - name: Configurar Python
       uses: actions/setup-python@v4
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: '3.11'
     
-    - name: Instalar dependências
+    - name: Instalar cx_freeze e dependências
       run: |
-        python -m pip install --upgrade pip
         pip install cx_freeze
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        pip install -r requirements.txt
     
     - name: Construir executável
       run: |
-        python setup.py build_exe
+        python setup.py build
     
-    - name: Preparar artefatos
+    - name: Compactar resultado
       run: |
-        # Renomear pasta de build para incluir SO e versão
-        if [ "$RUNNER_OS" == "Windows" ]; then
-          mv build "agrupar_avc-${{ github.ref_name }}-win64"
-          7z a -tzip "agrupar_avc-${{ github.ref_name }}-win64.zip" "agrupar_avc-${{ github.ref_name }}-win64"
-        elif [ "$RUNNER_OS" == "Linux" ]; then
-          mv build "agrupar_avc-${{ github.ref_name }}-linux"
-          tar -czf "agrupar_avc-${{ github.ref_name }}-linux.tar.gz" "agrupar_avc-${{ github.ref_name }}-linux"
-        else
-          mv build "agrupar_avc-${{ github.ref_name }}-macos"
-          tar -czf "agrupar_avc-${{ github.ref_name }}-macos.tar.gz" "agrupar_avc-${{ github.ref_name }}-macos"
-        fi
-    
-    - name: Fazer upload dos artefatos
-      uses: actions/upload-artifact@v4
-      with:
-        name: executaveis-${{ matrix.os }}-py${{ matrix.python-version }}
-        path: |
-          *.zip
-          *.tar.gz
-          *.exe
-        retention-days: 7
-    
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
-    
-    steps:
-    - name: Baixar todos os artefatos
-      uses: actions/download-artifact@v4
-      with:
-        path: ./artifacts
+        Compress-Archive -Path "build\*" -DestinationPath "SeuProjeto-${{ github.ref_name }}-windows.zip"
     
     - name: Criar Release
       uses: softprops/action-gh-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
+        tag_name: ${{ github.ref }}
         name: Release ${{ github.ref_name }}
-        body: |
-          Executáveis construídos automaticamente para a tag ${{ github.ref_name }}
-          
-          **Sistemas suportados:**
-          - Windows
-          - Linux
-          - macOS
-        draft: false
-        prerelease: false
         files: |
-          ./artifacts/**/*.zip
-          ./artifacts/**/*.tar.gz
-          ./artifacts/**/*.exe
+          SeuProjeto-*.zip
